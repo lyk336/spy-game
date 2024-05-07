@@ -5,12 +5,13 @@ import { User } from '@/scripts/user';
 import Players from '@/components/players';
 import Locations from '@/components/locations';
 import { io } from 'socket.io-client';
-import { Game } from '@/scripts/game';
+import { IGame } from '@/scripts/game';
+import Navbar from '@/components/nav';
 
 export default function Home() {
   const [onlineUsers, setOnlineUsers] = useState<Array<User>>([]);
   const [user, setUser] = useState<User>();
-  const [game, setGame] = useState<Game | null>(null);
+  const [game, setGame] = useState<IGame | null>(null);
   const socketRef = useRef<any>();
 
   useEffect(() => {
@@ -31,28 +32,22 @@ export default function Home() {
     socket.on('connect', () => {
       socket.emit('userConnect', user);
 
-      socket.on('gameCreated', (game: Game) => {
+      socket.on('gameCreated', (game: IGame, users: Array<User>) => {
         setGame(game);
+        setOnlineUsers(users);
 
-        let thisUser: User;
-        if ((user.id = game.spyId)) {
-          thisUser = { ...user, isSpy: true };
+        const userData: User = { ...user };
+        if (game.spyId !== user.id) {
+          userData.isSpy = false;
         } else {
-          thisUser = { ...user, isSpy: false };
+          userData.isSpy = true;
         }
-        setUser(thisUser);
-
-        // add spy role to actual spy
-        setOnlineUsers((users: Array<User>) =>
-          users.map((user: User) => {
-            user.isSpy = false;
-            return user;
-          })
-        );
+        setUser(userData);
       });
       socket.on('updateOnlineUsers', (usersOnline: Array<User>) => {
         setOnlineUsers(usersOnline);
       });
+      // socket.on('youSpy', () => {});
     });
 
     // user leave site => emit event
@@ -66,17 +61,21 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    console.log(user);
-  }, [user]);
-
   const handleCreateGame = () => {
     socketRef.current.emit('createGame');
   };
+  const handleChangeNick = (name: string): void => {
+    if (!user) return;
+
+    const userData: User = { ...user, name };
+    localStorage.setItem('userData', JSON.stringify(userData));
+    setUser(userData);
+  };
   return (
     <main className='main'>
-      <button onClick={handleCreateGame}>CREAYE GAME</button>
-      <Players game={game} onlineUsers={onlineUsers} user={user} />
+      <button onClick={handleCreateGame}>CREATE GAME</button>
+      <Navbar handleChangeNick={handleChangeNick} />
+      <Players onlineUsers={onlineUsers} user={user} />
       <Locations />
     </main>
   );

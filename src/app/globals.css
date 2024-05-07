@@ -60,7 +60,7 @@ body {
   width: 100%;
 }
 .main {
-  padding-top: 1rem;
+  padding-top: 4.25rem;
   min-height: 100dvh;
 
   user-select: none;
@@ -136,6 +136,8 @@ body {
 }
 .location {
   position: relative;
+
+  cursor: pointer;
 }
 .location img {
   max-width: 9.5rem;
@@ -166,4 +168,41 @@ body {
 .location.crossed .location__name {
   text-decoration: line-through !important;
   filter: brightness(0.8);
+}
+/*==========
+    Navbar
+  ==========*/
+
+.navbar {
+  display: flex;
+  justify-content: center;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: 3.25rem;
+  background-color: #222831;
+}
+.navbar__container {
+  align-items: start;
+  padding: 0 4rem;
+}
+.navbar button {
+  padding: 0.375rem 0.75rem;
+  background-color: #89cff0;
+
+  color: #222831;
+  font-size: 1rem;
+  font-weight: 500;
+
+  border-radius: 0.25rem;
+  transition: all 0.15s;
+}
+.navbar button:hover {
+  filter: brightness(0.8);
+}
+.navbar button:active {
+  filter: brightness(0.7);
 }

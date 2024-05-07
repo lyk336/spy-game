@@ -11,11 +11,4 @@ export class User {
       .toString()
       .padStart(3, '0');
   public isSpy: boolean = false;
-
-  // constructor(userData?: IUserData) {
-  //   if (!userData) return;
-  //   this.id = userData.id;
-  //   this.name = userData.name;
-  //   this.isSpy = userData.isSpy;
-  // }
 }

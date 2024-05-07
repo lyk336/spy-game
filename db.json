@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "id": "adsdsad",
+      "name": "2asdfasd"
+    },
+    {
+      "id": "1adsdsdsaad",
+      "name": "1asddasdfasd"
+    },
+    {
+      "id": "1714994835143855",
+      "name": "player348",
+      "isSpy": false
+    },
+    {
+      "id": "1715013217753997",
+      "name": "player426",
+      "isSpy": false
+    },
+    {
+      "id": "1715069969788511",
+      "name": "player818",
+      "isSpy": false
+    },
+    {
+      "id": "1715082575107416",
+      "name": "player300",
+      "isSpy": false
+    }
+  ]
+}

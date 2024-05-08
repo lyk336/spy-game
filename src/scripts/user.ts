@@ -1,8 +1,3 @@
-interface IUserData {
-  id: string;
-  name: string;
-  isSpy: boolean;
-}
 export class User {
   public id: string = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
   public name: string =

@@ -1,16 +1,53 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
+import ChangeName from './changeNickForm';
+import { useTimeout } from '@/hooks/useTimeout';
 
 interface INavbarProps {
-  handleChangeNick: (name: string) => void;
+  handleChangeName: (name: string) => void;
 }
 
-const Navbar: FC<INavbarProps> = () => {
+const Navbar: FC<INavbarProps> = ({ handleChangeName }) => {
+  const [isChanging, setIsChanging] = useState<boolean>(false);
+  const [isDisappearing, setIsDisappearing] = useState<boolean>(false);
+  const { timeoutClear, timeout } = useTimeout();
+
+  const turnOffPopup = () => {
+    setIsDisappearing(true);
+    timeout(() => {
+      setIsChanging(false);
+      setIsDisappearing(false);
+    }, 300);
+  };
+  const handleStartChanging = () => {
+    // turning off
+    if (isChanging && !isDisappearing) {
+      turnOffPopup();
+      return;
+    }
+
+    // turning on
+    timeoutClear();
+    setIsChanging(true);
+    setIsDisappearing(false);
+  };
+  const handleSubmitChange = (name: string): void => {
+    if (!name) return;
+
+    turnOffPopup();
+    handleChangeName(name);
+  };
+
   return (
-    <nav className='navbar'>
-      <div className='navbar__container'>
-        <button className='navbar__change-nickname'>Change nickname</button>
-      </div>
-    </nav>
+    <>
+      <nav className='navbar'>
+        <div className='navbar__container'>
+          <button className='navbar__change-nickname blue-button' onClick={handleStartChanging}>
+            Змінити ім&apos;я
+          </button>
+        </div>
+      </nav>
+      {isChanging && <ChangeName handleSubmitChange={handleSubmitChange} isDisappearing={isDisappearing} />}
+    </>
   );
 };
 

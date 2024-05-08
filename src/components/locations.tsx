@@ -1,12 +1,8 @@
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import Image from 'next/image';
 import { locations, ILocation } from '@/scripts/locationsData';
 
 interface ILocationsProps {}
-interface IImage {
-  name: string;
-  isCrossed: boolean;
-}
 
 const imageMap: Map<string, boolean> = new Map(locations.map((location: ILocation) => [location.locationName, false]));
 

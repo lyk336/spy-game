@@ -7,7 +7,7 @@ const baseLink = 'http://localhost';
 // const baseLink = 'http://26.60.238.204';
 
 const usersOnline = new Map();
-// usersOnline.set('testId', { id: 'testId', name: 'test', isSpy: false });
+
 const locations = [];
 fetch(`${baseLink}:3000/api/getLocations`)
   .then((resp) => resp.json())
@@ -50,6 +50,13 @@ io.on('connection', (socket) => {
 
   socket.on('createGame', () => {
     game();
+  });
+
+  socket.on('userNameChanged', (userData) => {
+    const user = usersOnline.get(userData.id);
+    user.name = userData.name;
+    const usersArray = mapToArray();
+    io.emit('updateOnlineUsers', usersArray);
   });
 });
 

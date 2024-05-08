@@ -47,7 +47,6 @@ export default function Home() {
       socket.on('updateOnlineUsers', (usersOnline: Array<User>) => {
         setOnlineUsers(usersOnline);
       });
-      // socket.on('youSpy', () => {});
     });
 
     // user leave site => emit event
@@ -64,17 +63,18 @@ export default function Home() {
   const handleCreateGame = () => {
     socketRef.current.emit('createGame');
   };
-  const handleChangeNick = (name: string): void => {
+  const handleChangeName = (name: string): void => {
     if (!user) return;
 
     const userData: User = { ...user, name };
     localStorage.setItem('userData', JSON.stringify(userData));
+    socketRef.current.emit('userNameChanged', userData);
     setUser(userData);
   };
   return (
     <main className='main'>
       <button onClick={handleCreateGame}>CREATE GAME</button>
-      <Navbar handleChangeNick={handleChangeNick} />
+      <Navbar handleChangeName={handleChangeName} />
       <Players onlineUsers={onlineUsers} user={user} />
       <Locations />
     </main>

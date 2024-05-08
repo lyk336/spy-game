@@ -1,7 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+/*==========
+      map
+    0.resets
+    1.utility classes
+    2.tables
+    3.locations
+    4.navbar
+    5.change name popup
+  ============*/
+
 /*==========
     resets
   ==========*/
+:root {
+  --primary-color: #31363f;
+  --dark-color: #222831;
+  --primary-light-color: #eee;
+  --light-blue: #89cff0;
+}
 * {
   padding: 0;
   margin: 0;
@@ -47,8 +64,8 @@ button {
 }
 body {
   font-family: 'Roboto', sans-serif;
-  color: #eeeeee;
-  background-color: #31363f;
+  color: var(--primary-light-color);
+  background-color: var(--primary-color);
 }
 .main,
 [class*='__container'] {
@@ -69,6 +86,25 @@ body {
   max-width: 79rem;
   padding: 0 2rem;
 }
+/*===================
+    utility classes
+  ===================*/
+.blue-button {
+  background-color: var(--light-blue);
+
+  color: var(--dark-color);
+  font-size: 1rem;
+  font-weight: 500;
+
+  border-radius: 0.25rem;
+  transition: all 0.15s;
+}
+.blue-button:hover {
+  filter: brightness(0.8);
+}
+.blue-button:active {
+  filter: brightness(0.7);
+}
 
 /*==========
     tables
@@ -87,7 +123,7 @@ body {
   row-gap: 0.25rem;
 }
 .tables__table {
-  border: 2px solid #222831;
+  border: 2px solid var(--dark-color);
   padding: 0.25rem 0.5rem;
   width: 12rem;
   min-height: 2rem;
@@ -98,7 +134,7 @@ body {
   border-radius: 0.25rem;
 }
 .player-you {
-  color: #89cff0;
+  color: var(--light-blue);
 }
 .player-spy {
   color: #e30b5c;
@@ -170,7 +206,7 @@ body {
   filter: brightness(0.8);
 }
 /*==========
-    Navbar
+    navbar
   ==========*/
 
 .navbar {
@@ -181,9 +217,10 @@ body {
   top: 0;
   left: 0;
   right: 0;
+  z-index: 2;
 
   height: 3.25rem;
-  background-color: #222831;
+  background-color: var(--dark-color);
 }
 .navbar__container {
   align-items: start;
@@ -191,18 +228,71 @@ body {
 }
 .navbar button {
   padding: 0.375rem 0.75rem;
-  background-color: #89cff0;
+}
 
-  color: #222831;
-  font-size: 1rem;
+/*=====================
+    change name popup
+  =====================*/
+.change-name {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+
+  position: fixed;
+  top: -10rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+
+  background-color: var(--primary-light-color);
+  width: 25rem;
+  height: 12.5rem;
+  padding: 2rem;
+
+  border-radius: 0.5rem;
+}
+.change-name__title {
+  color: var(--dark-color);
   font-weight: 500;
+  text-align: center;
+}
+.change-name__input {
+  border: 1px solid var(--dark-color);
+  padding: 0.25rem 0.5rem;
+
+  font-size: 1rem;
 
   border-radius: 0.25rem;
-  transition: all 0.15s;
 }
-.navbar button:hover {
-  filter: brightness(0.8);
+.change-name__input:focus {
+  outline-offset: 1px;
 }
-.navbar button:active {
-  filter: brightness(0.7);
+.change-name__button {
+  padding: 0.5rem 2rem;
+  width: fit-content;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+.change-name.appearing {
+  animation: appearFromTop 0.25s ease-in forwards;
+}
+.change-name.disappearing {
+  animation: disappearToBottom 0.3s ease-in forwards;
+}
+@keyframes appearFromTop {
+  0% {
+    top: -10rem;
+  }
+  100% {
+    top: 10rem;
+  }
+}
+@keyframes disappearToBottom {
+  0% {
+    top: 10rem;
+  }
+  100% {
+    top: 100%;
+  }
 }

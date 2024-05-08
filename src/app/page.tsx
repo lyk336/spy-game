@@ -1,18 +1,19 @@
 'use client';
-
 import { useEffect, useRef, useState } from 'react';
 import { User } from '@/scripts/user';
-import Players from '@/components/players';
-import Locations from '@/components/locations';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import { IGame } from '@/scripts/game';
+// components
 import Navbar from '@/components/nav';
+import Players from '@/components/players';
+import GameBar from '@/components/gameBar';
+import Locations from '@/components/locations';
 
 export default function Home() {
   const [onlineUsers, setOnlineUsers] = useState<Array<User>>([]);
   const [user, setUser] = useState<User>();
   const [game, setGame] = useState<IGame | null>(null);
-  const socketRef = useRef<any>();
+  const socketRef = useRef<Socket>();
 
   useEffect(() => {
     let userData: string | null = localStorage.getItem('userData');
@@ -24,6 +25,7 @@ export default function Home() {
       localStorage.setItem('userData', userJSON);
     }
     const user: User = JSON.parse(userData);
+
     setUser(user);
 
     // connect socket.io
@@ -42,8 +44,10 @@ export default function Home() {
         } else {
           userData.isSpy = true;
         }
+        console.log(userData);
         setUser(userData);
       });
+
       socket.on('updateOnlineUsers', (usersOnline: Array<User>) => {
         setOnlineUsers(usersOnline);
       });
@@ -60,22 +64,26 @@ export default function Home() {
     };
   }, []);
 
-  const handleCreateGame = () => {
-    socketRef.current.emit('createGame');
-  };
   const handleChangeName = (name: string): void => {
     if (!user) return;
 
     const userData: User = { ...user, name };
-    localStorage.setItem('userData', JSON.stringify(userData));
-    socketRef.current.emit('userNameChanged', userData);
+    localStorage.setItem('userData', JSON.stringify({ ...userData, isSpy: false, isReady: false }));
+    socketRef.current!.emit('userNameChanged', userData);
     setUser(userData);
+  };
+  const endGame = (): void => {
+    if (!game) return;
+
+    const endedGame: IGame = { ...game, isGameEnded: true };
+    setGame(endedGame);
   };
   return (
     <main className='main'>
-      <button onClick={handleCreateGame}>CREATE GAME</button>
+      {/* <button onClick={handleCreateGame}>CREATE GAME</button> */}
       <Navbar handleChangeName={handleChangeName} />
       <Players onlineUsers={onlineUsers} user={user} />
+      <GameBar game={game} socket={socketRef.current!} endGame={endGame} user={user} onlineUsers={onlineUsers} />
       <Locations />
     </main>
   );

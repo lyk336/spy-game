@@ -27,7 +27,7 @@ const Players: FC<IPlayersProps> = ({ onlineUsers, user }) => {
         <ul className='players__tables tables'>
           {tables.map((player: User | 0, i: number) => {
             return (
-              <div className='tables__table' key={i}>
+              <div className={`tables__table ${player !== 0 && player.isReady ? 'ready' : ''}`} key={i}>
                 <div
                   className={`tables__player ${
                     player !== 0 && user?.id === player.id && `player-you ${user?.isSpy ? 'player-spy' : ''}`

@@ -1,4 +1,4 @@
-import { FC, useState, ChangeEvent } from 'react';
+import { FC, useState, ChangeEvent, useRef, useEffect } from 'react';
 
 interface IChangeNicknameProps {
   handleSubmitChange: (name: string) => void;
@@ -7,9 +7,27 @@ interface IChangeNicknameProps {
 
 const ChangeName: FC<IChangeNicknameProps> = ({ isDisappearing, handleSubmitChange }) => {
   const [name, setName] = useState<string>('');
+  const submitOnEnter = useRef<() => void>();
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setName(e.target.value);
   };
+  submitOnEnter.current = (): void => {
+    handleSubmitChange(name);
+  };
+
+  useEffect(() => {
+    const closeOnEsc = (e: KeyboardEvent): void => {
+      if (e.key === 'Enter' && submitOnEnter.current) {
+        submitOnEnter.current();
+      }
+    };
+    document.addEventListener('keydown', closeOnEsc);
+
+    return () => {
+      document.removeEventListener('keydown', closeOnEsc);
+    };
+  }, []);
 
   return (
     <div className={`change-name appearing ${isDisappearing ? 'disappearing' : ''}`}>
@@ -20,6 +38,7 @@ const ChangeName: FC<IChangeNicknameProps> = ({ isDisappearing, handleSubmitChan
         placeholder="Нове ім'я"
         value={name}
         onChange={handleInputChange}
+        autoFocus
       />
       <button
         className='change-name__button blue-button'

@@ -7,6 +7,10 @@ const baseLink = 'http://localhost';
 // const baseLink = 'http://26.60.238.204';
 
 const usersOnline = new Map();
+// addUserToMap({ id: '1', name: 'vovan1', isSpy: false, isReady: true }, { id: '1' });
+// addUserToMap({ id: '2', name: 'vovan2', isSpy: false, isReady: true }, { id: '2' });
+// addUserToMap({ id: '3', name: 'vovan3', isSpy: false, isReady: true }, { id: '3' });
+// const usersConnectedBeforeGameEnd = new Map();
 
 const locations = [];
 fetch(`${baseLink}:3000/api/getLocations`)
@@ -48,15 +52,34 @@ io.on('connection', (socket) => {
     io.emit('updateOnlineUsers', usersArray);
   });
 
-  socket.on('createGame', () => {
-    game();
-  });
-
   socket.on('userNameChanged', (userData) => {
     const user = usersOnline.get(userData.id);
     user.name = userData.name;
     const usersArray = mapToArray();
     io.emit('updateOnlineUsers', usersArray);
+  });
+
+  socket.on('userReady', (userData) => {
+    if (isRecentlyCreatedGame) return;
+
+    const user = usersOnline.get(userData.id);
+    user.isReady = !user.isReady;
+    const usersArray = mapToArray();
+    io.emit('updateOnlineUsers', usersArray);
+
+    // start game if all ready
+    const readyUsersNumber = usersArray.filter((user) => user.isReady).length;
+    const usersNumber = usersOnline.size;
+    if (readyUsersNumber === usersNumber && usersOnline.size > 0) {
+      game();
+      usersOnline.forEach((user) => {
+        user.isReady = false;
+        console.log(user);
+      });
+      console.log(usersOnline);
+      io.emit('updateOnlineUsers', mapToArray());
+    }
+    console.log(`${readyUsersNumber}/${usersNumber}`);
   });
 });
 
@@ -74,6 +97,7 @@ function mapToArray() {
       id: socketUser.id,
       name: socketUser.name,
       isSpy: socketUser.isSpy,
+      isReady: socketUser.isReady,
     };
   });
 
@@ -94,6 +118,7 @@ function createGame() {
     spyId,
     locationName,
     locationTheme,
+    isGameEnded: false,
   };
 }
 function game() {
@@ -113,7 +138,7 @@ function game() {
   const usersArray = mapToArray();
 
   cache.set('gameData', JSON.stringify(game));
-  io.to(spy.socketId).emit('youSpy');
+  // io.to(spy.socketId).emit('youSpy');
   io.emit('gameCreated', game, usersArray);
 
   isRecentlyCreatedGame = true;

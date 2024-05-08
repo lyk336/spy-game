@@ -6,4 +6,7 @@ export class User {
       .toString()
       .padStart(3, '0');
   public isSpy: boolean = false;
+  public isReady: boolean = false;
+  // -----------------------------
+  public isOnline: boolean = true;
 }

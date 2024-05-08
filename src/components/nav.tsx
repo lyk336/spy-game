@@ -1,5 +1,5 @@
-import { FC, useState } from 'react';
-import ChangeName from './changeNickForm';
+import { FC, useEffect, useRef, useState } from 'react';
+import ChangeName from './changeNameForm';
 import { useTimeout } from '@/hooks/useTimeout';
 
 interface INavbarProps {
@@ -10,6 +10,7 @@ const Navbar: FC<INavbarProps> = ({ handleChangeName }) => {
   const [isChanging, setIsChanging] = useState<boolean>(false);
   const [isDisappearing, setIsDisappearing] = useState<boolean>(false);
   const { timeoutClear, timeout } = useTimeout();
+  const closeOnEscRef = useRef<() => void>();
 
   const turnOffPopup = () => {
     setIsDisappearing(true);
@@ -36,6 +37,24 @@ const Navbar: FC<INavbarProps> = ({ handleChangeName }) => {
     turnOffPopup();
     handleChangeName(name);
   };
+  closeOnEscRef.current = (): void => {
+    if (isChanging) {
+      turnOffPopup();
+    }
+  };
+
+  useEffect(() => {
+    const closeOnEsc = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' && closeOnEscRef.current) {
+        closeOnEscRef.current();
+      }
+    };
+    document.addEventListener('keydown', closeOnEsc);
+
+    return () => {
+      document.removeEventListener('keydown', closeOnEsc);
+    };
+  }, []);
 
   return (
     <>

@@ -8,6 +8,7 @@ import Navbar from '@/components/nav';
 import Players from '@/components/players';
 import GameBar from '@/components/gameBar';
 import Locations from '@/components/locations';
+import Game from '@/components/gameScreen';
 
 export default function Home() {
   const [onlineUsers, setOnlineUsers] = useState<Array<User>>([]);
@@ -37,6 +38,7 @@ export default function Home() {
       socket.on('gameCreated', (game: IGame, users: Array<User>) => {
         setGame(game);
         setOnlineUsers(users);
+        console.log('gameCreated', users);
 
         const userData: User = { ...user };
         if (game.spyId !== user.id) {
@@ -44,12 +46,30 @@ export default function Home() {
         } else {
           userData.isSpy = true;
         }
-        console.log(userData);
         setUser(userData);
       });
 
       socket.on('updateOnlineUsers', (usersOnline: Array<User>) => {
         setOnlineUsers(usersOnline);
+        console.log('updateOnlineUsers', usersOnline);
+        const thisUserIndex: number = usersOnline.findIndex((userData: User) => userData.id === user.id);
+
+        if (thisUserIndex < 0) {
+          const thisUser: User = { ...user, isInGame: false };
+          setUser(thisUser);
+        } else {
+          setUser(usersOnline[thisUserIndex]);
+        }
+      });
+
+      socket.on('youNotInGame', (game: IGame) => {
+        const userData: User = { ...user, isInGame: false };
+        setUser(userData);
+        setGame(game);
+      });
+
+      socket.on('gameUpdated', (game: IGame) => {
+        setGame(game);
       });
     });
 
@@ -68,6 +88,7 @@ export default function Home() {
     if (!user) return;
 
     const userData: User = { ...user, name };
+    console.log('user', user);
     localStorage.setItem('userData', JSON.stringify({ ...userData, isSpy: false, isReady: false }));
     socketRef.current!.emit('userNameChanged', userData);
     setUser(userData);
@@ -77,12 +98,17 @@ export default function Home() {
 
     const endedGame: IGame = { ...game, isGameEnded: true };
     setGame(endedGame);
+    socketRef.current?.emit('gameEnded');
   };
+
   return (
     <main className='main'>
       {/* <button onClick={handleCreateGame}>CREATE GAME</button> */}
       <Navbar handleChangeName={handleChangeName} />
-      <Players onlineUsers={onlineUsers} user={user} />
+      <div className='game-process '>
+        <Players onlineUsers={onlineUsers} user={user} />
+        <Game user={user} game={game} />
+      </div>
       <GameBar game={game} socket={socketRef.current!} endGame={endGame} user={user} onlineUsers={onlineUsers} />
       <Locations />
     </main>

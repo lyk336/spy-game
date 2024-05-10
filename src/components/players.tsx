@@ -21,25 +21,30 @@ const Players: FC<IPlayersProps> = ({ onlineUsers, user }) => {
   }, [onlineUsers]);
 
   return (
-    <div className='players__container'>
-      <div className='players'>
-        <h2 className='players__title title'>Гравці</h2>
-        <ul className='players__tables tables'>
-          {tables.map((player: User | 0, i: number) => {
-            return (
-              <div className={`tables__table ${player !== 0 && player.isReady ? 'ready' : ''}`} key={i}>
+    <div className='players'>
+      <h2 className='players__title title'>Гравці</h2>
+      <ul className='players__tables tables'>
+        {tables.map((player: User | 0, i: number) => {
+          return (
+            <div
+              className={`tables__table ${player !== 0 && player.isReady ? 'ready' : ''} ${
+                i === onlineUsers.length - 1 ? 'last-user' : ''
+              } ${player !== 0 && player.isAsking ? 'asking' : ''}`}
+              key={i}
+            >
+              {player !== 0 && (
                 <div
                   className={`tables__player ${
-                    player !== 0 && user?.id === player.id && `player-you ${user?.isSpy ? 'player-spy' : ''}`
-                  }`}
+                    user?.id === player.id && `player-you ${user?.isSpy ? 'player-spy' : ''}`
+                  } ${!player.isOnline ? 'disconnected' : ''} ${player.isAsking ? 'asking' : ''}`}
                 >
-                  {player !== 0 && player.name}
+                  {player.name}
                 </div>
-              </div>
-            );
-          })}
-        </ul>
-      </div>
+              )}
+            </div>
+          );
+        })}
+      </ul>
     </div>
   );
 };

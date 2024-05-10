@@ -28,7 +28,7 @@ const Locations: FC<ILocationsProps> = () => {
               key={location.fileName}
             >
               <Image src={`/assets/locations/${location.fileName}`} alt='' width={152} height={120} />
-              <h3 className='location__name'>{location.locationName}</h3>
+              <h3 className='location__name bold-white-text'>{location.locationName}</h3>
             </div>
           ))}
         </ul>

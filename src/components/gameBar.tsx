@@ -1,4 +1,4 @@
-import { IGame } from '@/scripts/game';
+import { GameResults, IGame } from '@/scripts/game';
 import { User, Votes } from '@/scripts/user';
 import { FC, useMemo } from 'react';
 import { Socket } from 'socket.io-client';
@@ -6,12 +6,12 @@ import { Socket } from 'socket.io-client';
 interface IGameBarProps {
   game: IGame | null;
   socket: Socket;
-  endGame: () => void;
   user: User | undefined;
   onlineUsers: Array<User>;
+  gameResult: GameResults | null;
 }
 
-const GameBar: FC<IGameBarProps> = ({ game, socket, endGame, user, onlineUsers }) => {
+const GameBar: FC<IGameBarProps> = ({ game, socket, user, onlineUsers, gameResult }) => {
   const handleReady = (): void => {
     if (!user) return;
     socket.emit('userReady', user);
@@ -31,6 +31,12 @@ const GameBar: FC<IGameBarProps> = ({ game, socket, endGame, user, onlineUsers }
     );
     return suitableUsers.length;
   }, [onlineUsers]);
+  const numberOfUserVotedForSpy = useMemo<number>((): number => {
+    const suitableUsers: Array<User> = onlineUsers.filter(
+      (user: User) => user.isInGame && user.isOnline && user.votedSpyId
+    );
+    return suitableUsers.length;
+  }, [onlineUsers]);
 
   const handleVoteForNewRound = () => {
     socket.emit('userVote', user, Votes.nextRound);
@@ -39,41 +45,53 @@ const GameBar: FC<IGameBarProps> = ({ game, socket, endGame, user, onlineUsers }
     socket.emit('userVote', user, Votes.detectSpy);
   };
 
-  console.log(game);
   return (
     <div className='gamebar__container'>
-      {game && !game.isGameEnded && game.isRoundEnd && (
-        <h3 className='gamebar__votes title'>Total votes ({`${numberOfVotes}/${requiredNumberOfVotes}`})</h3>
-      )}
       <div className='gamebar'>
-        {onlineUsers.length > 0 && (!game || game.isGameEnded) && (
-          <button className={`gamebar__start-game ${user?.isReady ? 'active-button' : ''}`} onClick={handleReady}>
-            Ready to start game ({`${numberOfVotes}/${requiredNumberOfVotes}`})
-          </button>
-        )}
+        <div className='gamebar__title-box'>
+          {game && !game.isGameEnded && game.isRoundEnd && (
+            <h3 className='gamebar__votes title'>Total votes ({`${numberOfVotes}/${requiredNumberOfVotes}`})</h3>
+          )}
+          {gameResult && (
+            <h3 className={`gamebar__result title ${gameResult}`}>
+              {gameResult === GameResults.win ? 'You win!' : 'You lose!'}
+            </h3>
+          )}
+          {game?.isVotingForSpy && (
+            <h3 className='gamebar__votes title'>{`Choose a person you think is a spy (${numberOfUserVotedForSpy}/${requiredNumberOfVotes})`}</h3>
+          )}
+        </div>
 
-        {user?.isInGame && game && !game.isGameEnded && !game.isRoundEnd && (
-          <button className={`gamebar__next-round ${user.isReady ? 'active-button' : ''}`} onClick={handleNextRound}>
-            Next player ({`${numberOfVotes}/${requiredNumberOfVotes}`})
-          </button>
-        )}
+        <div className='gamebar__bar'>
+          {onlineUsers.length > 0 && (!game || game.isGameEnded) && (
+            <button className={`gamebar__start-game ${user?.isReady ? 'active-button' : ''}`} onClick={handleReady}>
+              Ready to start game ({`${numberOfVotes}/${requiredNumberOfVotes}`})
+            </button>
+          )}
 
-        {user?.isInGame && game && !game.isGameEnded && game.isRoundEnd && (
-          <>
-            <button
-              className={`gamebar__start-game ${user.vote === Votes.nextRound ? 'active-button' : ''}`}
-              onClick={handleVoteForNewRound}
-            >
-              One more round
+          {user?.isInGame && game && !game.isGameEnded && !game.isRoundEnd && !game.isVotingForSpy && (
+            <button className={`gamebar__next-round ${user.isReady ? 'active-button' : ''}`} onClick={handleNextRound}>
+              Next player ({`${numberOfVotes}/${requiredNumberOfVotes}`})
             </button>
-            <button
-              className={`gamebar__start-game ${user.vote === Votes.detectSpy ? 'active-button' : ''}`}
-              onClick={handleVoteForSpy}
-            >
-              Vote for spy
-            </button>
-          </>
-        )}
+          )}
+
+          {user?.isInGame && game && !game.isGameEnded && game.isRoundEnd && (
+            <>
+              <button
+                className={`gamebar__start-game ${user.vote === Votes.nextRound ? 'active-button' : ''}`}
+                onClick={handleVoteForNewRound}
+              >
+                One more round
+              </button>
+              <button
+                className={`gamebar__start-game ${user.vote === Votes.detectSpy ? 'active-button' : ''}`}
+                onClick={handleVoteForSpy}
+              >
+                Vote for spy
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { User } from '@/scripts/user';
 import { io, Socket } from 'socket.io-client';
-import { IGame } from '@/scripts/game';
+import { GameResults, IGame } from '@/scripts/game';
 // components
 import Navbar from '@/components/nav';
 import Players from '@/components/players';
@@ -14,18 +14,19 @@ export default function Home() {
   const [onlineUsers, setOnlineUsers] = useState<Array<User>>([]);
   const [user, setUser] = useState<User>();
   const [game, setGame] = useState<IGame | null>(null);
+  const [gameResult, setGameResult] = useState<null | GameResults>(null);
   const socketRef = useRef<Socket>();
 
   useEffect(() => {
-    let userData: string | null = localStorage.getItem('userData');
-    if (!userData) {
+    let userDataJSON: string | null = localStorage.getItem('userData');
+    if (!userDataJSON) {
       const user: User = new User();
       const userJSON: string = JSON.stringify(user);
-      userData = userJSON;
+      userDataJSON = userJSON;
 
       localStorage.setItem('userData', userJSON);
     }
-    const user: User = JSON.parse(userData);
+    const user: User = JSON.parse(userDataJSON);
 
     setUser(user);
 
@@ -38,7 +39,7 @@ export default function Home() {
       socket.on('gameCreated', (game: IGame, users: Array<User>) => {
         setGame(game);
         setOnlineUsers(users);
-        console.log('gameCreated', users);
+        setGameResult(null);
 
         const userData: User = { ...user };
         if (game.spyId !== user.id) {
@@ -51,15 +52,16 @@ export default function Home() {
 
       socket.on('updateOnlineUsers', (usersOnline: Array<User>) => {
         setOnlineUsers(usersOnline);
-        console.log('updateOnlineUsers', usersOnline);
-        const thisUserIndex: number = usersOnline.findIndex((userData: User) => userData.id === user.id);
+        try {
+          const thisUserIndex: number = usersOnline.findIndex((userData: User) => userData.id === user.id);
 
-        if (thisUserIndex < 0) {
-          const thisUser: User = { ...user, isInGame: false };
-          setUser(thisUser);
-        } else {
-          setUser(usersOnline[thisUserIndex]);
-        }
+          if (thisUserIndex < 0) {
+            const thisUser: User = { ...user, isInGame: false };
+            setUser(thisUser);
+          } else {
+            setUser(usersOnline[thisUserIndex]);
+          }
+        } catch (error) {}
       });
 
       socket.on('youNotInGame', (game: IGame) => {
@@ -70,6 +72,25 @@ export default function Home() {
 
       socket.on('gameUpdated', (game: IGame) => {
         setGame(game);
+      });
+
+      socket.on('gameEnded', (isSpyWon: boolean, game: IGame) => {
+        setGame(game);
+
+        if (isSpyWon) {
+          if (user.id === game.spyId) {
+            setGameResult(GameResults.win);
+            return;
+          }
+          setGameResult(GameResults.lose);
+          return;
+        }
+
+        if (user.id === game.spyId) {
+          setGameResult(GameResults.lose);
+          return;
+        }
+        setGameResult(GameResults.win);
       });
     });
 
@@ -88,28 +109,34 @@ export default function Home() {
     if (!user) return;
 
     const userData: User = { ...user, name };
-    console.log('user', user);
     localStorage.setItem('userData', JSON.stringify({ ...userData, isSpy: false, isReady: false }));
     socketRef.current!.emit('userNameChanged', userData);
     setUser(userData);
   };
-  const endGame = (): void => {
-    if (!game) return;
 
-    const endedGame: IGame = { ...game, isGameEnded: true };
-    setGame(endedGame);
-    socketRef.current?.emit('gameEnded');
+  const handleSelectSpy = (selectedUserId: string): void => {
+    if (!user || selectedUserId === user.id) return;
+    socketRef.current?.emit('selectedSpy', user, selectedUserId);
   };
 
   return (
     <main className='main'>
-      {/* <button onClick={handleCreateGame}>CREATE GAME</button> */}
       <Navbar handleChangeName={handleChangeName} />
-      <div className='game-process '>
-        <Players onlineUsers={onlineUsers} user={user} />
-        <Game user={user} game={game} />
-      </div>
-      <GameBar game={game} socket={socketRef.current!} endGame={endGame} user={user} onlineUsers={onlineUsers} />
+      {onlineUsers && (
+        <>
+          <div className='game-process '>
+            <Players onlineUsers={onlineUsers} user={user} game={game} handleSelectSpy={handleSelectSpy} />
+            <Game user={user} game={game} />
+          </div>
+          <GameBar
+            game={game}
+            socket={socketRef.current!}
+            user={user}
+            onlineUsers={onlineUsers}
+            gameResult={gameResult}
+          />
+        </>
+      )}
       <Locations />
     </main>
   );

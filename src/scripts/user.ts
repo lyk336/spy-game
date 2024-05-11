@@ -15,6 +15,7 @@ export class User {
   public isOnline: boolean = true;
   public isInGame: boolean = true;
   public isAsking: boolean = false;
-  // ----------------------------
   public vote: null | Votes = null;
+  public votedSpyId: string | null = null;
+  public canBeVoted: boolean = false;
 }

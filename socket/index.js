@@ -3,8 +3,8 @@ const express = require('express');
 const socketIo = require('socket.io');
 const NodeCache = require('node-cache');
 
-const baseLink = 'http://localhost';
-// const baseLink = 'http://26.60.238.204';
+// const baseLink = 'http://localhost';
+const baseLink = 'http://26.60.238.204';
 
 const usersOnline = new Map();
 addUserToMap(
@@ -17,6 +17,7 @@ addUserToMap(
     isInGame: true,
     isAsking: false,
     vote: null,
+    votedSpyId: '1715351759252117',
   },
   { id: '1' }
 );
@@ -30,6 +31,7 @@ addUserToMap(
     isInGame: true,
     isAsking: false,
     vote: null,
+    votedSpyId: '1715351759252117',
   },
   { id: '2' }
 );
@@ -43,14 +45,13 @@ addUserToMap(
     isInGame: true,
     isAsking: false,
     vote: null,
+    votedSpyId: '1715351759252117',
   },
   { id: '3' }
 );
+
 const usersNotInGame = new Map();
 const usersOnGameStart = new Map();
-
-const usersVotedForNewRound = [];
-const usersVotedForDetectSpy = [];
 
 const locations = [];
 fetch(`${baseLink}:3000/api/getLocations`)
@@ -133,7 +134,7 @@ io.on('connection', (socket) => {
     console.log(`${readyUsersNumber}/${usersNumber}`);
     if (readyUsersNumber === usersNumber && usersOnline.size > 0) {
       game();
-      resetUsersVotes();
+      resetUsers();
       firstUserAsks();
       io.emit('updateOnlineUsers', mapToArray());
       return;
@@ -158,7 +159,7 @@ io.on('connection', (socket) => {
     const usersNumber = readyUsersInGame(usersArray);
     if (readyUsersNumber === usersNumber) {
       console.log('usersOnline11', usersOnline);
-      resetUsersVotes();
+      resetUsers();
       game.questionNumber++;
       cache.set('gameData', JSON.stringify(game));
 
@@ -194,7 +195,6 @@ io.on('connection', (socket) => {
     if (!cachedGame) return;
     const game = JSON.parse(cachedGame);
     if (!game.isRoundEnd || game.isGameEnded) return;
-    console.log('work', vote);
 
     if (user.vote === vote) {
       user.vote = null;
@@ -217,13 +217,11 @@ io.on('connection', (socket) => {
     ).length;
     if (readyUsersNumber === usersNumber) {
       if (usersVotedForNewRound >= usersVotedForDetectSpy) {
-        console.log('resul: new round');
         game.isRoundEnd = false;
         game.questionNumber = 0;
 
-        resetUsersVotes();
+        resetUsers();
         firstUserAsks();
-        console.log('GAME RESUMED', game);
 
         cache.set('gameData', JSON.stringify(game));
         io.emit('gameUpdated', game);
@@ -233,12 +231,81 @@ io.on('connection', (socket) => {
       }
 
       // start voting for spy
-      console.log('resul: detect spy');
+      console.log('result: detect spy');
+      game.isRoundEnd = false;
+      game.isVotingForSpy = true;
+      resetUsers();
+      usersOnline.forEach((user) => {
+        user.canBeVoted = true;
+      });
+
+      cache.set('gameData', JSON.stringify(game));
+      io.emit('gameUpdated', game);
+      io.emit('updateOnlineUsers', mapToArray());
     }
   });
 
-  socket.on('gameEnded', () => {
-    endGame();
+  socket.on('selectedSpy', (userData, selectedUserId) => {
+    // check to avoid unexpected bugs
+    const user = usersOnline.get(userData.id);
+    if (!user) return;
+    const cachedGame = cache.get('gameData');
+    if (!cachedGame) return;
+    const game = JSON.parse(cachedGame);
+    if (!game.isVotingForSpy) return;
+    if (user.id === selectedUserId) return;
+
+    user.votedSpyId = selectedUserId;
+    io.emit('updateOnlineUsers', mapToArray());
+
+    const usersArray = mapToArray();
+    const usersNumber = totalUsersInGame(usersArray);
+    const votedUsers = usersArray.filter((user) => user.isInGame && user.isOnline && user.votedSpyId).length;
+    console.log('votedUsers : usersNumber', votedUsers, usersNumber);
+    if (votedUsers === usersNumber) {
+      // calculate all votes
+      const usersVoteNumbersEntries = usersArray.map((user) => [user.id, { ...user, numberOfVotes: 0 }]);
+      const usersVoteNumbersMap = new Map(usersVoteNumbersEntries);
+      // console.log('usersVoteNumbersMap', usersVoteNumbersMap);
+      // console.log('usersVoteNumbersEntries', usersVoteNumbersEntries);
+
+      usersArray.forEach((user) => {
+        if (!user.votedSpyId) return;
+
+        usersVoteNumbersMap.get(user.votedSpyId).numberOfVotes++;
+      });
+      const votedUsers = Array.from(usersVoteNumbersMap, ([key, value]) => value);
+      const mostVotes = Math.max(...votedUsers.map((user) => user.numberOfVotes));
+      const mostVotedUsers = votedUsers.filter((user) => user.numberOfVotes === mostVotes);
+      // mostVotedUsers.forEach((user) => {
+      //   usersOnline.get(user.id).canBeVoted = true;
+      // });
+
+      resetUsers();
+      io.emit('updateOnlineUsers', mapToArray());
+
+      if (mostVotedUsers.length === 1) {
+        const selectedUserId = mostVotedUsers[0].id;
+        const selectedUser = usersOnline.get(selectedUserId);
+        const isSpyWon = !selectedUser.isSpy;
+
+        game.isVotingForSpy = false;
+        game.isGameEnded = true;
+        console.log('isSpyWon', isSpyWon);
+        io.emit('gameEnded', isSpyWon, game);
+        endGame();
+        return;
+      }
+
+      // if 2 and more users get same number of votes
+      mostVotedUsers.forEach((user) => {
+        usersOnline.get(user.id).canBeVoted = true;
+      });
+      cache.set('gameData', JSON.stringify(game));
+      io.emit('gameUpdated', game);
+      // console.log('GAME', game);
+      // console.log('usersOnline', usersOnline);
+    }
   });
 });
 
@@ -253,7 +320,7 @@ function addUserToMap(user, socket, map) {
   map.set(user.id, socketUser);
 }
 function mapToArray() {
-  const usersArray = Array.from(usersOnline, ([name, value]) => value).map((socketUser) => {
+  const usersArray = Array.from(usersOnline, ([key, value]) => value).map((socketUser) => {
     return {
       id: socketUser.id,
       name: socketUser.name,
@@ -263,6 +330,8 @@ function mapToArray() {
       isInGame: socketUser.isInGame,
       isAsking: socketUser.isAsking,
       vote: socketUser.vote,
+      votedSpyId: socketUser.votedSpyId,
+      canBeVoted: socketUser.canBeVoted,
     };
   });
 
@@ -274,12 +343,13 @@ function createGame() {
     const randomItem = array[randomIndex];
     return randomItem;
   };
-  const spyId = getRandomItem(mapToArray(usersOnline)).id;
+  const usersArray = mapToArray();
+  const spyId = getRandomItem(usersArray).id;
   const location = getRandomItem(locations);
   const locationFileName = location.fileName;
   const locationName = location.locationName;
   const locationTheme = getRandomItem(location.relatedThemes);
-  const usersIdInGame = mapToArray().map((user) => user.id);
+  const usersIdInGame = usersArray.map((user) => user.id);
 
   for (const [key, value] of usersOnline.entries()) {
     usersOnGameStart.set(key, value);
@@ -287,15 +357,17 @@ function createGame() {
   shuffleMap();
 
   return {
-    spyId: '1715351759252117',
+    // spyId: '1715419016962695',
+    spyId,
     locationFileName,
     locationName,
     locationTheme,
+
     isGameEnded: false,
     usersIdInGame,
     questionNumber: 0,
     isRoundEnd: false,
-    isVotingForSpy: true,
+    isVotingForSpy: false,
   };
 }
 function game() {
@@ -327,11 +399,10 @@ function checkExistingGame(socketReceiver) {
   if (!cachedGame) return;
 
   const game = JSON.parse(cachedGame);
-  const usersArray = mapToArray();
   if (socketReceiver) {
-    io.to(socketReceiver).emit('gameCreated', game, usersArray);
+    io.to(socketReceiver).emit('gameUpdated', game);
   } else {
-    io.emit('gameCreated', game, usersArray);
+    io.emit('gameUpdated', game);
   }
 }
 function userConnect(user, socket) {
@@ -367,9 +438,14 @@ function mergeMaps() {
 }
 function endGame() {
   cache.del('gameData');
+  usersOnline.forEach((user) => {
+    if (!user.isOnline) {
+      usersOnline.delete(user.id);
+    }
+  });
   mergeMaps();
-  io.emit('updateOnlineUsers', mapToArray());
   usersOnGameStart.clear();
+  io.emit('updateOnlineUsers', mapToArray());
 }
 function isGameInProgress() {
   const cachedGame = cache.get('gameData');
@@ -396,11 +472,13 @@ function readyUsersInGame(array) {
   const readyUsersNumber = array.filter((user) => user.isReady && user.isOnline && user.isInGame).length;
   return readyUsersNumber;
 }
-function resetUsersVotes() {
+function resetUsers() {
   usersOnline.forEach((user) => {
     user.isReady = false;
     user.isAsking = false;
     user.vote = null;
+    user.votedSpyId = null;
+    user.canBeVoted = false;
   });
 }
 function firstUserAsks() {
@@ -426,5 +504,8 @@ setInterval(() => {
   usersOnline.get('1').isReady = true;
   usersOnline.get('2').isReady = true;
   usersOnline.get('3').isReady = true;
+  usersOnline.get('1').votedSpyId = '2';
+  usersOnline.get('2').votedSpyId = '1';
+  usersOnline.get('3').votedSpyId = '1';
   io.emit('updateOnlineUsers', mapToArray());
-}, 3000);
+}, 1000);

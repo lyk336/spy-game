@@ -116,6 +116,7 @@ body {
   text-align: center;
   font-size: 1.25rem;
   font-weight: 700;
+  line-height: 1;
 }
 .bold-white-text {
   color: #fff;
@@ -202,6 +203,19 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
   width: 1.75rem;
   height: 1.75rem;
   background-image: url(/spy-icon.png);
+}
+
+.tables__table.select:has(.tables__player) {
+  border: 2px dashed #e30b5c;
+
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tables__table.select:has(.tables__player):hover {
+  background: var(--dark-color);
+}
+.tables__table.select:has(.tables__player):active {
+  opacity: 0.7;
 }
 
 @media (max-width: 47.99rem) {
@@ -402,11 +416,18 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
   ===========*/
 .gamebar {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  width: 100%;
+}
+.gamebar__bar {
+  display: flex;
   justify-content: space-evenly;
   align-items: center;
 
   width: 100%;
-  min-height: 5rem;
+  min-height: 5.25rem;
   padding: 1rem 0;
   margin-bottom: 1rem;
 }
@@ -432,13 +453,35 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
   transform: scale(0.98);
   box-shadow: 2px 2px 10px rgba(255, 255, 255, 0.2);
 }
-.gamebar__votes {
-  margin: 0;
-}
 .gamebar .active-button {
   border-color: var(--light-blue);
 }
+.gamebar .title {
+  margin: 0 !important;
+}
+.gamebar__votes {
+  margin: 0;
+}
+.gamebar__result {
+  margin-bottom: 0.5rem;
 
+  font-size: 1.5rem;
+}
+.gamebar__result.win {
+  color: #00a36c;
+  text-shadow: 1px 1px 3px #2aaa8a;
+}
+.gamebar__result.lose {
+  color: #c21e56;
+  text-shadow: 1px 1px 3px #e30b5c;
+}
+.gamebar__title-box {
+  display: flex;
+  align-items: center;
+
+  min-height: 1.5rem;
+  margin-bottom: 0.5rem;
+}
 @keyframes shadowFlicker {
   0% {
     box-shadow: 4px 4px 20px rgba(255, 255, 255, 0.2);

@@ -11,9 +11,10 @@ import GameBar from '@/components/gameBar';
 import Locations from '@/components/locations';
 import Game from '@/components/gameScreen';
 
-// Change base url to your site's URL
-const baseURL = 'http://localhost';
-// ~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~
+// If necessary, change the base URL and port to your actual URL and port
+const baseSocketServerURL: string = 'http://localhost';
+const socketServerPort: number = 5000;
+// ~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~
 
 export default function Home() {
   const [onlineUsers, setOnlineUsers] = useState<Array<User>>([]);
@@ -39,7 +40,7 @@ export default function Home() {
     setUser(user);
 
     // connect socket.io
-    const socket = io(`${baseURL}:5000`);
+    const socket = io(`${baseSocketServerURL}:${socketServerPort}`);
     socketRef.current = socket;
     socket.on('connect', () => {
       socket.emit('userConnect', user);

@@ -3,9 +3,11 @@ const express = require('express');
 const socketIo = require('socket.io');
 const NodeCache = require('node-cache');
 
-// Change base url to your site's URL
-const baseURL = 'http://localhost';
-// ~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~
+// If necessary, change the base URL and port to your actual URL and port
+const websiteURL = 'http://localhost:3000';
+const baseSocketServerURL = 'http://localhost';
+const socketServerPort = 5000;
+// ~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~
 
 const usersOnline = new Map();
 
@@ -13,7 +15,7 @@ const usersNotInGame = new Map();
 const usersOnGameStart = new Map();
 
 const locations = [];
-fetch(`${baseURL}:3000/api/getLocations`)
+fetch(`${websiteURL}/api/getLocations`)
   .then((resp) => resp.json())
   .then((resp) => {
     locations.push(...resp.locations);
@@ -34,7 +36,7 @@ const server = http.createServer(app);
 
 const io = socketIo(server, {
   cors: {
-    origin: `${baseURL}:3000`,
+    origin: websiteURL,
     methods: ['GET', 'POST'],
   },
 });
@@ -302,8 +304,8 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(5000, () => {
-  console.log(`Socket.IO server running on ${baseURL}:5000`);
+server.listen(socketServerPort, () => {
+  console.log(`Socket.IO server running on ${baseSocketServerURL}:${socketServerPort}`);
 });
 
 function addUserToMap(user, socket, map) {

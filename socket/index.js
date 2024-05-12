@@ -3,51 +3,11 @@ const express = require('express');
 const socketIo = require('socket.io');
 const NodeCache = require('node-cache');
 
+// Change base url to your site's URL
 const baseURL = 'http://localhost';
+// ~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~!!~
 
 const usersOnline = new Map();
-addUserToMap(
-  {
-    id: '1',
-    name: 'vovan1',
-    isSpy: false,
-    isReady: true,
-    isOnline: true,
-    isInGame: true,
-    isAsking: false,
-    vote: null,
-    votedSpyId: '1715351759252117',
-  },
-  { id: '1' }
-);
-addUserToMap(
-  {
-    id: '2',
-    name: 'vovan2',
-    isSpy: false,
-    isReady: true,
-    isOnline: true,
-    isInGame: true,
-    isAsking: false,
-    vote: null,
-    votedSpyId: '1715351759252117',
-  },
-  { id: '2' }
-);
-addUserToMap(
-  {
-    id: '3',
-    name: 'vovan3',
-    isSpy: false,
-    isReady: true,
-    isOnline: true,
-    isInGame: true,
-    isAsking: false,
-    vote: null,
-    votedSpyId: '1715351759252117',
-  },
-  { id: '3' }
-);
 
 const usersNotInGame = new Map();
 const usersOnGameStart = new Map();
@@ -148,7 +108,7 @@ io.on('connection', (socket) => {
     // start game if all ready
     const readyUsersNumber = usersArray.filter((user) => user.isReady).length;
     const usersNumber = usersOnline.size;
-    if (readyUsersNumber === usersNumber && usersOnline.size > 0) {
+    if (readyUsersNumber === usersNumber && usersOnline.size >= 4) {
       game();
       resetUsers();
       firstUserAsks();

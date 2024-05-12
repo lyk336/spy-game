@@ -446,7 +446,7 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
 .gamebar button {
   padding: 0.75rem 1.5rem;
   min-width: 15rem;
-  /* padding: 0.75rem 0; */
+
   background-color: var(--dark-color);
   border: 2px solid transparent;
 

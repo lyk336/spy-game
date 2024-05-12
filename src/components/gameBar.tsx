@@ -37,7 +37,10 @@ const GameBar: FC<IGameBarProps> = ({
 
   const requiredNumberOfVotes = useMemo<number>((): number => {
     const suitableUsers: Array<User> = onlineUsers.filter((user: User) => user.isInGame && user.isOnline);
-    return suitableUsers.length;
+    const minPlayers = 4;
+    const requiredNumber = Math.max(suitableUsers.length, minPlayers);
+
+    return requiredNumber;
   }, [onlineUsers]);
   const numberOfVotes = useMemo<number>((): number => {
     const suitableUsers: Array<User> = onlineUsers.filter(

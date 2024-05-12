@@ -3,8 +3,7 @@ const express = require('express');
 const socketIo = require('socket.io');
 const NodeCache = require('node-cache');
 
-// const baseLink = 'http://localhost';
-const baseLink = 'http://26.60.238.204';
+const baseURL = 'http://localhost';
 
 const usersOnline = new Map();
 addUserToMap(
@@ -54,7 +53,7 @@ const usersNotInGame = new Map();
 const usersOnGameStart = new Map();
 
 const locations = [];
-fetch(`${baseLink}:3000/api/getLocations`)
+fetch(`${baseURL}:3000/api/getLocations`)
   .then((resp) => resp.json())
   .then((resp) => {
     locations.push(...resp.locations);
@@ -63,12 +62,19 @@ fetch(`${baseLink}:3000/api/getLocations`)
     throw new Error('cannot fetch locations' + err);
   });
 
+const gameEndReason = {
+  spyGuessedRightLocation: 'spyGuessedRightLocation',
+  spyGuessedWrongLocation: 'spyGuessedWrongLocation',
+  detectedSpy: 'detectedSpy',
+  detectedWrongSpy: 'detectedWrongSpy',
+};
+
 const app = express();
 const server = http.createServer(app);
 
 const io = socketIo(server, {
   cors: {
-    origin: `${baseLink}:3000`,
+    origin: `${baseURL}:3000`,
     methods: ['GET', 'POST'],
   },
 });
@@ -93,7 +99,18 @@ io.on('connection', (socket) => {
       io.emit('updateOnlineUsers');
 
       const usersRemain = usersArray.filter((user) => user.isOnline).length;
-      if (usersRemain === 0) endGame();
+      if (usersRemain === 0) {
+        game.isVotingForSpy = false;
+        game.isGameEnded = true;
+        cache.del('gameData');
+
+        usersOnline.clear();
+        mergeMaps();
+        usersOnGameStart.clear();
+
+        io.emit('updateOnlineUsers', mapToArray());
+        io.emit('gameUpdated', game);
+      }
 
       return;
     }
@@ -131,7 +148,6 @@ io.on('connection', (socket) => {
     // start game if all ready
     const readyUsersNumber = usersArray.filter((user) => user.isReady).length;
     const usersNumber = usersOnline.size;
-    console.log(`${readyUsersNumber}/${usersNumber}`);
     if (readyUsersNumber === usersNumber && usersOnline.size > 0) {
       game();
       resetUsers();
@@ -158,7 +174,6 @@ io.on('connection', (socket) => {
     const readyUsersNumber = totalUsersInGame(usersArray);
     const usersNumber = readyUsersInGame(usersArray);
     if (readyUsersNumber === usersNumber) {
-      console.log('usersOnline11', usersOnline);
       resetUsers();
       game.questionNumber++;
       cache.set('gameData', JSON.stringify(game));
@@ -172,6 +187,9 @@ io.on('connection', (socket) => {
         io.emit('gameUpdated', game);
         io.emit('updateOnlineUsers', mapToArray());
 
+        if (game.round === 3) {
+          spyMustSelectLocation(game);
+        }
         return;
       }
 
@@ -179,7 +197,6 @@ io.on('connection', (socket) => {
       const nextUser = nextQuestionRoundUsers[game.questionNumber];
       nextUser.isAsking = true;
       usersOnline.get(nextUser.id).isAsking = true;
-      console.log('usersOnline.get(nextUser.id)', usersOnline.get(nextUser.id));
       io.emit('updateOnlineUsers', nextQuestionRoundUsers);
       return;
     }
@@ -219,6 +236,7 @@ io.on('connection', (socket) => {
       if (usersVotedForNewRound >= usersVotedForDetectSpy) {
         game.isRoundEnd = false;
         game.questionNumber = 0;
+        game.round++;
 
         resetUsers();
         firstUserAsks();
@@ -231,7 +249,6 @@ io.on('connection', (socket) => {
       }
 
       // start voting for spy
-      console.log('result: detect spy');
       game.isRoundEnd = false;
       game.isVotingForSpy = true;
       resetUsers();
@@ -261,13 +278,10 @@ io.on('connection', (socket) => {
     const usersArray = mapToArray();
     const usersNumber = totalUsersInGame(usersArray);
     const votedUsers = usersArray.filter((user) => user.isInGame && user.isOnline && user.votedSpyId).length;
-    console.log('votedUsers : usersNumber', votedUsers, usersNumber);
     if (votedUsers === usersNumber) {
       // calculate all votes
       const usersVoteNumbersEntries = usersArray.map((user) => [user.id, { ...user, numberOfVotes: 0 }]);
       const usersVoteNumbersMap = new Map(usersVoteNumbersEntries);
-      // console.log('usersVoteNumbersMap', usersVoteNumbersMap);
-      // console.log('usersVoteNumbersEntries', usersVoteNumbersEntries);
 
       usersArray.forEach((user) => {
         if (!user.votedSpyId) return;
@@ -277,9 +291,6 @@ io.on('connection', (socket) => {
       const votedUsers = Array.from(usersVoteNumbersMap, ([key, value]) => value);
       const mostVotes = Math.max(...votedUsers.map((user) => user.numberOfVotes));
       const mostVotedUsers = votedUsers.filter((user) => user.numberOfVotes === mostVotes);
-      // mostVotedUsers.forEach((user) => {
-      //   usersOnline.get(user.id).canBeVoted = true;
-      // });
 
       resetUsers();
       io.emit('updateOnlineUsers', mapToArray());
@@ -287,13 +298,25 @@ io.on('connection', (socket) => {
       if (mostVotedUsers.length === 1) {
         const selectedUserId = mostVotedUsers[0].id;
         const selectedUser = usersOnline.get(selectedUserId);
-        const isSpyWon = !selectedUser.isSpy;
+        const isSpyDetected = selectedUser.isSpy;
 
-        game.isVotingForSpy = false;
-        game.isGameEnded = true;
-        console.log('isSpyWon', isSpyWon);
-        io.emit('gameEnded', isSpyWon, game);
-        endGame();
+        if (isSpyDetected) {
+          if (!selectedUser.isOnline) {
+            // spy left the game => lose
+            const isSpyWon = false;
+            endGame(isSpyWon, gameEndReason.detectedSpy);
+            return;
+          }
+
+          // Spy gets a chance to guess the location
+          spyMustSelectLocation(game);
+          return;
+        }
+
+        // Spy instantly wins
+        const isSpyWon = true;
+        endGame(isSpyWon, gameEndReason.detectedWrongSpy);
+
         return;
       }
 
@@ -303,14 +326,24 @@ io.on('connection', (socket) => {
       });
       cache.set('gameData', JSON.stringify(game));
       io.emit('gameUpdated', game);
-      // console.log('GAME', game);
-      // console.log('usersOnline', usersOnline);
     }
+  });
+
+  socket.on('spyGuessedLocation', (locationName) => {
+    // check to avoid unexpected bugs
+    const cachedGame = cache.get('gameData');
+    if (!cachedGame) return;
+    const game = JSON.parse(cachedGame);
+    if (!game.isRoundEnd && !game.isSpyMustGuessTheLocation) return;
+
+    const isSpyWon = locationName === game.locationName;
+    const reason = isSpyWon ? gameEndReason.spyGuessedRightLocation : gameEndReason.spyGuessedWrongLocation;
+    endGame(isSpyWon, reason);
   });
 });
 
 server.listen(5000, () => {
-  console.log(`Socket.IO server running on ${baseLink}:5000`);
+  console.log(`Socket.IO server running on ${baseURL}:5000`);
 });
 
 function addUserToMap(user, socket, map) {
@@ -357,17 +390,18 @@ function createGame() {
   shuffleMap();
 
   return {
-    // spyId: '1715419016962695',
     spyId,
     locationFileName,
     locationName,
     locationTheme,
 
-    isGameEnded: false,
-    usersIdInGame,
     questionNumber: 0,
     isRoundEnd: false,
+    round: 1,
     isVotingForSpy: false,
+    isGameEnded: false,
+    isSpyMustGuessTheLocation: false,
+    usersIdInGame,
   };
 }
 function game() {
@@ -387,7 +421,6 @@ function game() {
 
   cache.set('gameData', JSON.stringify(game));
   io.emit('gameCreated', game, mapToArray());
-  console.log('GAME:', game);
 
   isRecentlyCreatedGame = true;
   setTimeout(() => {
@@ -436,8 +469,14 @@ function mergeMaps() {
     usersOnline.set(key, value);
   }
 }
-function endGame() {
+function endGame(isSpyWon, reason) {
+  const cachedGame = cache.get('gameData');
+  const game = JSON.parse(cachedGame);
+
+  game.isVotingForSpy = false;
+  game.isGameEnded = true;
   cache.del('gameData');
+
   usersOnline.forEach((user) => {
     if (!user.isOnline) {
       usersOnline.delete(user.id);
@@ -445,7 +484,9 @@ function endGame() {
   });
   mergeMaps();
   usersOnGameStart.clear();
+
   io.emit('updateOnlineUsers', mapToArray());
+  io.emit('gameEnded', isSpyWon, game, reason);
 }
 function isGameInProgress() {
   const cachedGame = cache.get('gameData');
@@ -487,25 +528,11 @@ function firstUserAsks() {
   firstUser.isAsking = true;
   usersOnline.get(firstUser.id).isAsking = true;
 }
+function spyMustSelectLocation(game) {
+  game.isVotingForSpy = false;
+  game.isSpyMustGuessTheLocation = true;
 
-// test;
-setTimeout(() => {
-  usersOnline.get('2').isOnline = false;
-  io.emit('updateOnlineUsers', mapToArray());
-  console.log('test disconnected');
-
-  setTimeout(() => {
-    usersOnline.get('2').isOnline = true;
-    io.emit('updateOnlineUsers', mapToArray());
-    console.log('test reconnected');
-  }, 5000);
-}, 10000);
-setInterval(() => {
-  usersOnline.get('1').isReady = true;
-  usersOnline.get('2').isReady = true;
-  usersOnline.get('3').isReady = true;
-  usersOnline.get('1').votedSpyId = '2';
-  usersOnline.get('2').votedSpyId = '1';
-  usersOnline.get('3').votedSpyId = '1';
-  io.emit('updateOnlineUsers', mapToArray());
-}, 1000);
+  cache.set('gameData', JSON.stringify(game));
+  io.emit('gameUpdated', game);
+  io.emit('spyMustGuessTheLocation', game.spyId);
+}

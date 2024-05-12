@@ -12,9 +12,8 @@ const Game: FC<IGameProps> = ({ user, game }) => {
   return (
     <div className='game'>
       <h2 className='game__title title'>{user?.isSpy ? 'Ви шпигун' : 'Локація'}</h2>
-      {/* {user && !user.isSpy && } */}
       <div className='game__location'>
-        {game && user && !user.isSpy && (
+        {game && user && (!user.isSpy || game.isGameEnded) && (
           <>
             <Image
               src={`/assets/locations/${game.locationFileName}`}
@@ -28,7 +27,7 @@ const Game: FC<IGameProps> = ({ user, game }) => {
             </div>
           </>
         )}
-        {game && user?.isSpy && (
+        {game && !game.isGameEnded && user?.isSpy && (
           <>
             <Image src={`/assets/spy.webp`} alt={game.locationName} width={300} height={250} />
             <div className='game__info'>

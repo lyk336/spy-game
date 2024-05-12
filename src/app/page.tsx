@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { User } from '@/scripts/user';
 import { io, Socket } from 'socket.io-client';
-import { GameResults, IGame } from '@/scripts/game';
+import { GameEndReason, GameResults, IGame, KeyOfGameEndReason } from '@/scripts/game';
+
 // components
 import Navbar from '@/components/nav';
 import Players from '@/components/players';
@@ -15,6 +16,9 @@ export default function Home() {
   const [user, setUser] = useState<User>();
   const [game, setGame] = useState<IGame | null>(null);
   const [gameResult, setGameResult] = useState<null | GameResults>(null);
+  const [gameEndReason, setGameEndReason] = useState<null | GameEndReason>(null);
+  const [isGuessingLocation, setIsGuessingLocation] = useState<boolean>(false);
+  const [isSpyMustGuesLocationMessage, setIsSpyMustGuessLocationMessage] = useState<string | null>(null);
   const socketRef = useRef<Socket>();
 
   useEffect(() => {
@@ -40,6 +44,7 @@ export default function Home() {
         setGame(game);
         setOnlineUsers(users);
         setGameResult(null);
+        setGameEndReason(null);
 
         const userData: User = { ...user };
         if (game.spyId !== user.id) {
@@ -48,6 +53,17 @@ export default function Home() {
           userData.isSpy = true;
         }
         setUser(userData);
+
+        if (game.isSpyMustGuessTheLocation) {
+          if (user.id === game.spyId) {
+            setIsGuessingLocation(true);
+            setIsSpyMustGuessLocationMessage(
+              'The players have discovered you. You must choose a location before you are caught!'
+            );
+            return;
+          }
+          setIsSpyMustGuessLocationMessage('You discovered the spy! But he may already know the location!');
+        }
       });
 
       socket.on('updateOnlineUsers', (usersOnline: Array<User>) => {
@@ -72,10 +88,22 @@ export default function Home() {
 
       socket.on('gameUpdated', (game: IGame) => {
         setGame(game);
+        if (game.isSpyMustGuessTheLocation && user.id === game.spyId) {
+          console.log('updated guessing location');
+          setIsGuessingLocation(true);
+          return;
+        }
+        setIsGuessingLocation(false);
       });
 
-      socket.on('gameEnded', (isSpyWon: boolean, game: IGame) => {
+      socket.on('gameEnded', (isSpyWon: boolean, game: IGame, gameEndReasonKey: KeyOfGameEndReason) => {
         setGame(game);
+        const reason: GameEndReason = GameEndReason[gameEndReasonKey];
+        setGameEndReason(reason);
+
+        // reset states
+        setIsSpyMustGuessLocationMessage(null);
+        setIsGuessingLocation(false);
 
         if (isSpyWon) {
           if (user.id === game.spyId) {
@@ -91,6 +119,16 @@ export default function Home() {
           return;
         }
         setGameResult(GameResults.win);
+      });
+
+      socket.on('spyMustGuessTheLocation', (spyId: string) => {
+        if (user.id === spyId) {
+          setIsSpyMustGuessLocationMessage(
+            'The players have discovered you. You must choose a location before you are caught!'
+          );
+          return;
+        }
+        setIsSpyMustGuessLocationMessage('You discovered the spy! But he may already know the location!');
       });
     });
 
@@ -119,10 +157,15 @@ export default function Home() {
     socketRef.current?.emit('selectedSpy', user, selectedUserId);
   };
 
+  const handleGuessLocation = (): void => {
+    if (!user?.isSpy) return;
+    setIsGuessingLocation((currentState: boolean) => !currentState);
+  };
+
   return (
     <main className='main'>
       <Navbar handleChangeName={handleChangeName} />
-      {onlineUsers && (
+      {onlineUsers ? (
         <>
           <div className='game-process '>
             <Players onlineUsers={onlineUsers} user={user} game={game} handleSelectSpy={handleSelectSpy} />
@@ -134,10 +177,16 @@ export default function Home() {
             user={user}
             onlineUsers={onlineUsers}
             gameResult={gameResult}
+            handleGuessLocation={handleGuessLocation}
+            isGuessingLocation={isGuessingLocation}
+            gameEndReason={gameEndReason}
+            isSpyMustGuesLocationMessage={isSpyMustGuesLocationMessage}
           />
         </>
+      ) : (
+        <div className='main__box'></div>
       )}
-      <Locations />
+      <Locations isGuessingLocation={isGuessingLocation} socket={socketRef.current!} />
     </main>
   );
 }

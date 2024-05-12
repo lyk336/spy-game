@@ -88,6 +88,9 @@ body {
 
   user-select: none;
 }
+.main__box {
+  height: 22.5rem;
+}
 [class*='__container'] {
   max-width: 79rem;
   padding: 0 2rem;
@@ -285,6 +288,9 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
   flex-direction: column;
   align-items: center;
 }
+.locations__list.guessing div:not(.crossed) {
+  outline: 3px solid #e30b5c;
+}
 .locations__list {
   display: flex;
   flex-wrap: wrap;
@@ -293,17 +299,22 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
   gap: 1rem;
 }
 .location {
+  display: flex;
+
   position: relative;
 
+  border-radius: 0.5rem;
   cursor: pointer;
 }
 .location img {
+  z-index: -1;
+
   max-width: 9.5rem;
   max-height: 7.5rem;
 
   object-fit: cover;
   object-position: bottom;
-  border-radius: 0.5rem;
+  border-radius: 0.25rem;
 
   filter: brightness(0.6);
 }
@@ -429,11 +440,13 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
   width: 100%;
   min-height: 5.25rem;
   padding: 1rem 0;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .gamebar button {
   padding: 0.75rem 1.5rem;
+  min-width: 15rem;
+  /* padding: 0.75rem 0; */
   background-color: var(--dark-color);
   border: 2px solid transparent;
 
@@ -452,6 +465,13 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
 .gamebar button:active {
   transform: scale(0.98);
   box-shadow: 2px 2px 10px rgba(255, 255, 255, 0.2);
+}
+.gamebar .gamebar__guess-location {
+  color: #e30b5c;
+  text-shadow: 1px 1px 2px #c21e56;
+}
+.gamebar .gamebar__guess-location.guessing {
+  border: 2px solid #e30b5c;
 }
 .gamebar .active-button {
   border-color: var(--light-blue);
@@ -475,12 +495,25 @@ body:has(.asking.last-user) .tables__table:first-child .tables__player::before {
   color: #c21e56;
   text-shadow: 1px 1px 3px #e30b5c;
 }
+.gamebar__reason {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1;
+}
+.gamebar__reason.win {
+  color: #00a36c;
+}
+.gamebar__reason.lose {
+  color: #c21e56;
+}
 .gamebar__title-box {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 0.5rem;
 
   min-height: 1.5rem;
-  margin-bottom: 0.5rem;
 }
 @keyframes shadowFlicker {
   0% {

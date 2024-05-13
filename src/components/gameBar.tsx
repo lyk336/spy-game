@@ -15,6 +15,8 @@ interface IGameBarProps {
   isSpyMustGuesLocationMessage: string | null;
 }
 
+const minPlayers: number = 4;
+
 const GameBar: FC<IGameBarProps> = ({
   game,
   socket,
@@ -37,10 +39,7 @@ const GameBar: FC<IGameBarProps> = ({
 
   const requiredNumberOfVotes = useMemo<number>((): number => {
     const suitableUsers: Array<User> = onlineUsers.filter((user: User) => user.isInGame && user.isOnline);
-    const minPlayers = 4;
-    const requiredNumber = Math.max(suitableUsers.length, minPlayers);
-
-    return requiredNumber;
+    return suitableUsers.length;
   }, [onlineUsers]);
   const numberOfVotes = useMemo<number>((): number => {
     const suitableUsers: Array<User> = onlineUsers.filter(
@@ -88,7 +87,7 @@ const GameBar: FC<IGameBarProps> = ({
         <div className='gamebar__bar'>
           {onlineUsers.length > 0 && (!game || game.isGameEnded) && (
             <button className={`gamebar__start-game ${user?.isReady ? 'active-button' : ''}`} onClick={handleReady}>
-              Ready to start game ({`${numberOfVotes}/${requiredNumberOfVotes}`})
+              Ready to start game ({`${numberOfVotes}/${Math.max(requiredNumberOfVotes, minPlayers)}`})
             </button>
           )}
 

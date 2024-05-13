@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## Before Starting
+
+In files 'src/app/page.tsx' and 'socket/index.js' change the 'baseSocketServerURL', 'socketServerPort' and 'websiteURL'(only inside 'socket/index.js') value to your actual URLs.
+
 ## Getting Started
 
 First, run the development server:
